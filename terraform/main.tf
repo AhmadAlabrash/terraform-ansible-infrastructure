@@ -36,13 +36,42 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "nextjob-platform-ec2-ecr-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ecr_readonly_attach" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "nextjob-platform-ec2-instance-profile"
+  role = aws_iam_role.ec2_ecr_role.name
+}
+
 resource "aws_instance" "app_server" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
 
   tags = {
     Name = "nextjob-platform-app-server"
   }
 }
+
