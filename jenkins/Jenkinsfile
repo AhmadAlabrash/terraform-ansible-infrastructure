@@ -2,8 +2,17 @@ pipeline {
     agent any
 
     environment {
+        AWS_ACCOUNT_ID     = '612990353866'
         AWS_DEFAULT_REGION = 'us-east-1'
-        TF_VAR_key_name = 'nextjob-key'
+
+        TF_VAR_key_name    = 'nextjob-key'
+
+        ECR_REPO           = 'nextjob-platform'
+        IMAGE_TAG          = "${BUILD_NUMBER}"
+        IMAGE_REPO         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${ECR_REPO}"
+        IMAGE_URI          = "${IMAGE_REPO}:${IMAGE_TAG}"
+
+        SONARQUBE_ENV      = 'sonarqube-server'
     }
 
     stages {
@@ -12,6 +21,9 @@ pipeline {
                 sh 'whoami'
                 sh 'pwd'
                 sh 'aws sts get-caller-identity'
+                sh 'docker --version'
+                sh 'node --version'
+                sh 'npm --version'
             }
         }
 
@@ -21,11 +33,74 @@ pipeline {
             }
         }
 
-        stage('Build NextJob App') {
+        stage('Install Dependencies') {
             steps {
                 dir('app') {
                     sh 'npm install'
+                }
+            }
+        }
+
+        stage('Build NextJob App') {
+            steps {
+                dir('app') {
                     sh 'npm run build'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                dir('app') {
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                        sh '''
+                            npx sonar-scanner \
+                              -Dsonar.projectKey=nextjob-platform \
+                              -Dsonar.projectName="NextJob Platform" \
+                              -Dsonar.sources=. \
+                              -Dsonar.exclusions=node_modules/**,.next/** \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('app') {
+                    sh '''
+                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                        docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh '''
+                        aws ecr describe-repositories --repository-names ${ECR_REPO} --region ${AWS_DEFAULT_REGION} || \
+                        aws ecr create-repository --repository-name ${ECR_REPO} --region ${AWS_DEFAULT_REGION}
+
+                        aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | \
+                        docker login --username AWS --password-stdin \
+                        ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+
+                        docker push ${IMAGE_URI}
+                    '''
                 }
             }
         }
@@ -67,9 +142,21 @@ EOF
         stage('Deploy NextJob Platform') {
             steps {
                 dir('ansible') {
-                    sh 'ansible-playbook playbook.yml'
+                    sh """
+                        ansible-playbook playbook.yml \
+                          --extra-vars "docker_image=${IMAGE_URI}"
+                    """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'NextJob Platform pipeline completed successfully.'
+        }
+        failure {
+            echo 'NextJob Platform pipeline failed.'
         }
     }
 }
