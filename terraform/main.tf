@@ -41,7 +41,7 @@ resource "aws_security_group" "app_sg" {
 }
 
 resource "aws_iam_role" "ec2_ecr_role" {
-  name = "nextjob-platform-ec2-ecr-role"
+  name_prefix = "nextjob-platform-ec2-ecr-role-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -63,7 +63,8 @@ resource "aws_iam_role_policy_attachment" "ec2_ecr_readonly_attach" {
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "nextjob-platform-ec2-instance-profile"
+  name_prefix = "nextjob-platform-ec2-instance-profile-"
+
   role = aws_iam_role.ec2_ecr_role.name
 }
 
