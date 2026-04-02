@@ -1,12 +1,21 @@
 variable "aws_region" {
-  default = "us-east-1"
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "instance_type" {
-  default = "t2.micro"
+  description = "EC2 instance type"
+  type        = string
+  default     = "t2.micro"
 }
 
 variable "key_name" {
-  description = "Existing AWS key pair name"
+  description = "AWS key pair name"
+  type        = string
+}
+
+variable "public_key_path" {
+  description = "Path to public SSH key"
   type        = string
 }
