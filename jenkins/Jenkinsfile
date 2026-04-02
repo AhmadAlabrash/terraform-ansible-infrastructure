@@ -3,12 +3,21 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
+        TF_VAR_key_name = 'nextjob-key'
     }
 
     stages {
+        stage('Debug Environment') {
+            steps {
+                sh 'whoami'
+                sh 'pwd'
+                sh 'aws sts get-caller-identity'
+            }
+        }
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/AhmadAlabrash/terraform-ansible-infrastructure'
+                git branch: 'main', url: 'YOUR_GITHUB_REPO_URL'
             }
         }
 
@@ -46,7 +55,10 @@ pipeline {
                     ).trim()
 
                     sh """
-                    sed -i 's/APP_SERVER_IP/${appIp}/g' ansible/inventory.ini
+                    cat > ansible/inventory.ini <<EOF
+[app]
+${appIp} ansible_user=ec2-user
+EOF
                     """
                 }
             }
@@ -61,5 +73,3 @@ pipeline {
         }
     }
 }
-
-
