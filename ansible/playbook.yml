@@ -2,6 +2,11 @@
   hosts: app
   become: true
 
+  vars:
+    aws_region: us-east-1
+    aws_account_id: "612990353866"
+    ecr_registry: "{{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com"
+
   tasks:
     - name: Update packages
       dnf:
@@ -26,27 +31,22 @@
         groups: docker
         append: true
 
-    - name: Create app directory
-      file:
-        path: /home/ec2-user/app
-        state: directory
-        owner: ec2-user
-        group: ec2-user
-        mode: '0755'
+    - name: Install AWS CLI
+      dnf:
+        name: awscli
+        state: present
 
-    - name: Copy app files
-      copy:
-        src: ../app/
-        dest: /home/ec2-user/app/
-        owner: ec2-user
-        group: ec2-user
-        mode: '0755'
+    - name: Login to Amazon ECR
+      shell: |
+        aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ ecr_registry }}
+      args:
+        executable: /bin/bash
 
-    - name: Build Docker image
-      command: docker build -t nextjob-platform /home/ec2-user/app
+    - name: Pull Docker image from ECR
+      command: docker pull {{ docker_image }}
 
     - name: Remove old container if exists
       shell: docker rm -f nextjob-platform || true
 
     - name: Run container
-      command: docker run -d --name nextjob-platform -p 3000:3000 nextjob-platform
+      command: docker run -d --name nextjob-platform -p 3000:3000 {{ docker_image }}
