@@ -7,11 +7,6 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  description = "AWS key pair name"
-  type        = string
-}
-
-variable "public_key_path" {
-  description = "Path to public SSH key"
+  description = "Existing AWS key pair name"
   type        = string
 }
