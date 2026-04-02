@@ -21,7 +21,7 @@ resource "aws_security_group" "app_sg" {
   }
 
   ingress {
-    description = "NextJob App"
+    description = "NextJob Platform"
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
@@ -34,6 +34,10 @@ resource "aws_security_group" "app_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "nextjob-platform-sg"
+  }
 }
 
 resource "aws_iam_role" "ec2_ecr_role" {
@@ -43,11 +47,11 @@ resource "aws_iam_role" "ec2_ecr_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
           Service = "ec2.amazonaws.com"
         }
+        Action = "sts:AssumeRole"
       }
     ]
   })
@@ -74,4 +78,3 @@ resource "aws_instance" "app_server" {
     Name = "nextjob-platform-app-server"
   }
 }
-

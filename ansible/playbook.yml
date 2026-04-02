@@ -1,4 +1,4 @@
-- name: Configure app server and run Next.js container
+- name: Configure app server and run NextJob Platform container
   hosts: app
   become: true
 
@@ -14,9 +14,11 @@
         state: latest
       ignore_errors: true
 
-    - name: Install Docker
+    - name: Install Docker and AWS CLI
       dnf:
-        name: docker
+        name:
+          - docker
+          - awscli
         state: present
 
     - name: Start Docker service
@@ -31,14 +33,22 @@
         groups: docker
         append: true
 
-    - name: Install AWS CLI
-      dnf:
-        name: awscli
-        state: present
+    - name: Wait a bit for IAM role credentials
+      pause:
+        seconds: 20
+
+    - name: Verify AWS identity on app server
+      command: aws sts get-caller-identity
+      register: aws_identity
+
+    - name: Show AWS identity
+      debug:
+        var: aws_identity.stdout
 
     - name: Login to Amazon ECR
       shell: |
-        aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ ecr_registry }}
+        aws ecr get-login-password --region {{ aws_region }} | \
+        docker login --username AWS --password-stdin {{ ecr_registry }}
       args:
         executable: /bin/bash
 
