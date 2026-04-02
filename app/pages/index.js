@@ -57,7 +57,7 @@ export default function Home() {
             <div className="heroText">
               <span className="badge">#1 Modern Hiring Platform</span>
               <h1>
-                Find your next opportunity with <span>NextJob</span>
+                Find your next opportunity with us <span>NextJob</span>
               </h1>
               <p>
                 A smart job platform for companies to post jobs and for talent
