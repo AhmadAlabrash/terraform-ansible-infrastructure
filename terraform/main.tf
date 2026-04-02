@@ -9,7 +9,7 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_security_group" "app_sg" {
-  name        = "nextjob-platform-sg"
+  name_prefix = "nextjob-platform-sg-"
   description = "Allow SSH and app traffic"
 
   ingress {
