@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/AhmadAlabrash/terraform-ansible-infrastructure'
+            }
+        }
+
+        stage('Build NextJob App') {
+            steps {
+                dir('app') {
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Update Inventory') {
+            steps {
+                script {
+                    def appIp = sh(
+                        script: "cd terraform && terraform output -raw app_server_public_ip",
+                        returnStdout: true
+                    ).trim()
+
+                    sh """
+                    sed -i 's/APP_SERVER_IP/${appIp}/g' ansible/inventory.ini
+                    """
+                }
+            }
+        }
+
+        stage('Deploy NextJob Platform') {
+            steps {
+                dir('ansible') {
+                    sh 'ansible-playbook playbook.yml'
+                }
+            }
+        }
+    }
+}
+
+
