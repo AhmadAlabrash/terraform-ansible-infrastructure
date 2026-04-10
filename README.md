@@ -26,6 +26,15 @@ Terraform provisions AWS infrastructure
 Ansible configures EC2 and deploys the application
 The app runs inside a Docker container on EC2
 
+
+
+## 🎥 Demo Video
+
+▶️ Click to watch the demo
+
+[![FloxAI Demo Video ▶️](https://img.youtube.com/vi/1zdeygyw6pY/maxresdefault.jpg)](https://www.youtube.com/watch?v=1zdeygyw6pY)
+
+
 ⚙️ Tech Stack
 Category	Tools Used
 CI/CD	Jenkins
